@@ -25,16 +25,22 @@ module.exports.createUser = (req, res) => {
       res.status(httpConstants.HTTP_STATUS_CREATED).send(user);
     })
     .catch((err) => {
-      res
-        .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-        .send({ message: err.message });
+      if (err.name === 'ValidationError') {
+        res
+          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
+          .send({ message: err.message });
+      } else {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
+      }
     });
 };
 
 module.exports.getUsers = (req, res) => {
   User.find({})
     .then((users) => {
-      res.status(httpConstants.HTTP_STATUS_OK).send(users);
+      res.send(users);
     })
     .catch(() => {
       res
@@ -53,7 +59,7 @@ module.exports.getUserById = (req, res) => {
             .send({ message: 'Пользователь не найден' });
           return;
         }
-        res.status(httpConstants.HTTP_STATUS_OK).send(user);
+        res.send(user);
       })
       .catch(() => {
         res
@@ -68,57 +74,57 @@ module.exports.getUserById = (req, res) => {
 };
 
 module.exports.editUser = (req, res) => {
-  if (req.user._id) {
-    User.findByIdAndUpdate(
-      req.user._id,
-      { name: req.body.name, about: req.body.about },
-      { new: 'true', runValidators: true },
-    )
-      .then((user) => {
-        if (!user) {
-          res
-            .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-            .send({ message: 'Пользователь не найден' });
-          return;
-        }
-        res.status(httpConstants.HTTP_STATUS_OK).send(user);
-      })
-      .catch((err) => {
+  User.findByIdAndUpdate(
+    req.user._id,
+    { name: req.body.name, about: req.body.about },
+    { new: 'true', runValidators: true },
+  )
+    .then((user) => {
+      if (!user) {
+        res
+          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
+          .send({ message: 'Пользователь не найден' });
+        return;
+      }
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
         res
           .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
           .send({ message: err.message });
-      });
-  } else {
-    res
-      .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-      .send({ message: 'На сервере произошла ошибка' });
-  }
+      } else {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
+      }
+    });
 };
 
 module.exports.editAvatar = (req, res) => {
-  if (req.user._id) {
-    User.findByIdAndUpdate(
-      req.user._id,
-      { avatar: req.body.avatar },
-      { new: 'true', runValidators: true },
-    )
-      .then((user) => {
-        if (!user) {
-          res
-            .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-            .send({ message: 'Пользователь не найден' });
-          return;
-        }
-        res.status(httpConstants.HTTP_STATUS_OK).send(user);
-      })
-      .catch((err) => {
+  User.findByIdAndUpdate(
+    req.user._id,
+    { avatar: req.body.avatar },
+    { new: 'true', runValidators: true },
+  )
+    .then((user) => {
+      if (!user) {
+        res
+          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
+          .send({ message: 'Пользователь не найден' });
+        return;
+      }
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'ValidationError') {
         res
           .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
           .send({ message: err.message });
-      });
-  } else {
-    res
-      .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-      .send({ message: 'На сервере произошла ошибка' });
-  }
+      } else {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
+      }
+    });
 };

@@ -25,9 +25,15 @@ module.exports.createCard = (req, res) => {
       res.status(httpConstants.HTTP_STATUS_CREATED).send(card);
     })
     .catch((err) => {
-      res
-        .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-        .send({ message: err.message });
+      if (err.name === 'ValidationError') {
+        res
+          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
+          .send({ message: err.message });
+      } else {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
+      }
     });
 };
 
@@ -46,17 +52,23 @@ module.exports.getCards = (req, res) => {
 
 module.exports.deleteCardById = (req, res) => {
   if (isValidObjectId(req.params.cardId)) {
-    Card.findByIdAndRemove(req.params.cardId).then((card) => {
-      if (!card) {
+    Card.findByIdAndRemove(req.params.cardId)
+      .then((card) => {
+        if (!card) {
+          res
+            .status(httpConstants.HTTP_STATUS_NOT_FOUND)
+            .send({ message: 'Карточка не найдена' });
+          return;
+        }
         res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: 'Карточка не найдена' });
-        return;
-      }
-      res
-        .status(httpConstants.HTTP_STATUS_OK)
-        .send({ message: 'Карточка удалена' });
-    });
+          .status(httpConstants.HTTP_STATUS_OK)
+          .send({ message: 'Карточка удалена' });
+      })
+      .catch(() => {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
+      });
   } else {
     res
       .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
@@ -80,6 +92,11 @@ module.exports.likeCard = (req, res) => {
           return;
         }
         res.status(httpConstants.HTTP_STATUS_OK).send(card);
+      })
+      .catch(() => {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
       });
   } else {
     res
@@ -104,6 +121,11 @@ module.exports.dislikeCard = (req, res) => {
           return;
         }
         res.status(httpConstants.HTTP_STATUS_OK).send(card);
+      })
+      .catch(() => {
+        res
+          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
+          .send({ message: 'На сервере произошла ошибка' });
       });
   } else {
     res
