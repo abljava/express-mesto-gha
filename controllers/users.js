@@ -10,8 +10,7 @@ const { Conflict } = require('../.github/errors/conflict');
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
 
-  return User.findOne({ email })
-    .select('+password')
+  return User.findOne({ email }).select('+password')
     .then((user) => {
       if (!user || !bcrypt.compareSync(password, user.password)) {
         throw new NotAuthorized('Неправильные почта или пароль');

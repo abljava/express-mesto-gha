@@ -38,10 +38,13 @@ module.exports.deleteCardById = (req, res, next) => {
       if (!card) {
         throw new NotFoundError('Карточка не найдена');
       }
-      if (card.owner._id !== req.user._id) {
+      if (card.owner._id.toString() !== req.user._id) {
         throw new Forbidden('Невозможно удалить карточку другого пользователя');
       }
-      res.send({ message: 'Карточка удалена' });
+      Card.findByIdAndRemove(req.params.cardId)
+        .then(() => {
+          res.send({ message: 'Карточка удалена' });
+        });
     })
     .catch((err) => {
       if (err.name === 'CastError') {

@@ -61,7 +61,7 @@ const validateUserId = celebrate({
 const validateCreateCard = celebrate({
   body: Joi.object().keys({
     name: Joi.string().min(2).max(30).required(),
-    link: Joi.string().pattern(
+    link: Joi.string().required().pattern(
       new RegExp(
         '^(https?:\\/\\/)?'
           + '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'
