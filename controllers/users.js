@@ -1,130 +1,123 @@
 const httpConstants = require('http2').constants;
-const { ObjectId } = require('mongoose').Types;
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const User = require('../models/user');
+const { NotFoundError } = require('../.github/errors/not-found-err');
+const { BadRequest } = require('../.github/errors/bad-request');
+const { NotAuthorized } = require('../.github/errors/not-authorized');
+const { Conflict } = require('../.github/errors/conflict');
 
-// функция валидации переданного id
-function isValidObjectId(id) {
-  if (ObjectId.isValid(id)) {
-    if (String(new ObjectId(id)) === id) return true;
-    return false;
-  }
-  return false;
-}
+module.exports.login = (req, res, next) => {
+  const { email, password } = req.body;
 
-module.exports.createUser = (req, res) => {
-  const { name, about, avatar } = req.body;
-
-  User.create({ name, about, avatar })
+  return User.findOne({ email })
+    .select('+password')
     .then((user) => {
-      if (!user) {
-        res
-          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-          .send({ message: 'На сервере произошла ошибка' });
-        return;
+      if (!user || !bcrypt.compareSync(password, user.password)) {
+        throw new NotAuthorized('Неправильные почта или пароль');
       }
+      const token = jwt.sign({ _id: user._id }, 'some-secret-key', {
+        expiresIn: '7d',
+      });
+
+      res.send({ token });
+    })
+    .catch(next);
+};
+
+module.exports.createUser = (req, res, next) => {
+  const {
+    name, about, avatar, email, password,
+  } = req.body;
+  bcrypt
+    .hash(password, 10)
+    .then((hash) => User.create({
+      name,
+      about,
+      avatar,
+      email,
+      password: hash,
+    }))
+    .then((user) => {
       res.status(httpConstants.HTTP_STATUS_CREATED).send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: err.message });
+        next(new BadRequest('Некорректные данные'));
+      } else if (err.code === 11000) {
+        next(new Conflict('Такой email уже зарегистрирован'));
       } else {
-        res
-          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-          .send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUserInfo = (req, res, next) => {
+  User.findById(req.user._id)
+    .orFail()
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.name === 'DocumentNotFoundError') {
+        next(new NotFoundError('Пользователь с таким id не найден'));
+      } else {
+        next(err);
+      }
+    });
+};
+
+module.exports.getUsers = (req, res, next) => {
   User.find({})
     .then((users) => {
       res.send(users);
     })
-    .catch(() => {
-      res
-        .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-        .send({ message: 'На сервере произошла ошибка' });
-    });
+    .catch(next);
 };
 
-module.exports.getUserById = (req, res) => {
-  if (isValidObjectId(req.params.userId)) {
-    User.findById(req.params.userId)
-      .then((user) => {
-        if (!user) {
-          res
-            .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-            .send({ message: 'Пользователь не найден' });
-          return;
-        }
-        res.send(user);
-      })
-      .catch(() => {
-        res
-          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-          .send({ message: 'На сервере произошла ошибка' });
-      });
-  } else {
-    res
-      .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-      .send({ message: 'Передан некорректный id пользователя' });
-  }
+module.exports.getUserById = (req, res, next) => {
+  User.findById(req.params.userId)
+    .then((user) => {
+      if (!user) {
+        throw new NotFoundError('Пользователь с таким id не найден');
+      }
+      res.send(user);
+    })
+    .catch(next);
 };
 
-module.exports.editUser = (req, res) => {
+module.exports.editUser = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { name: req.body.name, about: req.body.about },
     { new: 'true', runValidators: true },
   )
     .then((user) => {
-      if (!user) {
-        res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: 'Пользователь не найден' });
-        return;
-      }
       res.send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: err.message });
+        next(new BadRequest('Некорректные данные'));
       } else {
-        res
-          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-          .send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
 
-module.exports.editAvatar = (req, res) => {
+module.exports.editAvatar = (req, res, next) => {
   User.findByIdAndUpdate(
     req.user._id,
     { avatar: req.body.avatar },
     { new: 'true', runValidators: true },
   )
     .then((user) => {
-      if (!user) {
-        res
-          .status(httpConstants.HTTP_STATUS_NOT_FOUND)
-          .send({ message: 'Пользователь не найден' });
-        return;
-      }
       res.send(user);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {
-        res
-          .status(httpConstants.HTTP_STATUS_BAD_REQUEST)
-          .send({ message: err.message });
+        next(new BadRequest('Некорректные данные'));
       } else {
-        res
-          .status(httpConstants.HTTP_STATUS_INTERNAL_SERVER_ERROR)
-          .send({ message: 'На сервере произошла ошибка' });
+        next(err);
       }
     });
 };
