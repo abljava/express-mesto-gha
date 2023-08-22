@@ -1,4 +1,3 @@
-// require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { NotAuthorized } = require('../errors/not-authorized');
 
@@ -13,14 +12,14 @@ const auth = (req, res, next) => {
   let payload;
 
   try {
-    payload = jwt.verify(token, process.env.SECRET_KEY);
+    payload = jwt.verify(token, 'SECRET_KEY');
   } catch (err) {
     return next(new NotAuthorized('Необходима авторизация 2'));
   }
 
   req.user = payload;
 
-  next();
+  return next();
 };
 
 module.exports = { auth };

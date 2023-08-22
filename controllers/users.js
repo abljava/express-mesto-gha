@@ -15,7 +15,7 @@ module.exports.login = (req, res, next) => {
       if (!user || !bcrypt.compareSync(password, user.password)) {
         throw new NotAuthorized('Неправильные почта или пароль');
       }
-      const token = jwt.sign({ _id: user._id }, process.env.SECRET_KEY, {
+      const token = jwt.sign({ _id: user._id }, 'SECRET_KEY', {
         expiresIn: '7d',
       });
 
