@@ -2,10 +2,10 @@ const httpConstants = require('http2').constants;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user');
-const { NotFoundError } = require('../.github/errors/not-found-err');
-const { BadRequest } = require('../.github/errors/bad-request');
-const { NotAuthorized } = require('../.github/errors/not-authorized');
-const { Conflict } = require('../.github/errors/conflict');
+const { NotFoundError } = require('../errors/not-found-err');
+const { BadRequest } = require('../errors/bad-request');
+const { NotAuthorized } = require('../errors/not-authorized');
+const { Conflict } = require('../errors/conflict');
 
 module.exports.login = (req, res, next) => {
   const { email, password } = req.body;
@@ -15,7 +15,7 @@ module.exports.login = (req, res, next) => {
       if (!user || !bcrypt.compareSync(password, user.password)) {
         throw new NotAuthorized('Неправильные почта или пароль');
       }
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', {
+      const token = jwt.sign({ _id: user._id }, process.env.SECRET_KEY, {
         expiresIn: '7d',
       });
 
@@ -38,10 +38,9 @@ module.exports.createUser = (req, res, next) => {
       password: hash,
     }))
     .then((user) => {
-      const { _id } = user;
-      res.status(httpConstants.HTTP_STATUS_CREATED).send({
-        name, about, avatar, email, _id,
-      });
+      const newUser = user.toObject();
+      delete newUser.password;
+      return res.status(httpConstants.HTTP_STATUS_CREATED).send(newUser);
     })
     .catch((err) => {
       if (err.name === 'ValidationError') {

@@ -1,7 +1,8 @@
 const httpConstants = require('http2').constants;
-const { BadRequest } = require('../.github/errors/bad-request');
-const { Forbidden } = require('../.github/errors/forbidden');
-const { NotFoundError } = require('../.github/errors/not-found-err');
+
+const { BadRequest } = require('../errors/bad-request');
+const { Forbidden } = require('../errors/forbidden');
+const { NotFoundError } = require('../errors/not-found-err');
 const Card = require('../models/card');
 
 module.exports.createCard = (req, res, next) => {
@@ -9,9 +10,6 @@ module.exports.createCard = (req, res, next) => {
 
   Card.create({ name, link, owner: req.user._id })
     .then((card) => {
-      if (!card) {
-        throw new Error('На сервере произошла ошибка');
-      }
       res.status(httpConstants.HTTP_STATUS_CREATED).send(card);
     })
     .catch((err) => {
@@ -41,7 +39,7 @@ module.exports.deleteCardById = (req, res, next) => {
       if (card.owner._id.toString() !== req.user._id) {
         throw new Forbidden('Невозможно удалить карточку другого пользователя');
       }
-      Card.findByIdAndRemove(req.params.cardId)
+      return Card.deleteOne()
         .then(() => {
           res.send({ message: 'Карточка удалена' });
         });
@@ -49,8 +47,9 @@ module.exports.deleteCardById = (req, res, next) => {
     .catch((err) => {
       if (err.name === 'CastError') {
         next(new BadRequest('Некорректные данные'));
+      } else {
+        next(err);
       }
-      next(err);
     });
 };
 

@@ -1,20 +1,21 @@
+// require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { NotAuthorized } = require('../.github/errors/not-authorized');
+const { NotAuthorized } = require('../errors/not-authorized');
 
 const auth = (req, res, next) => {
   const { authorization } = req.headers;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
-    throw new NotAuthorized('Необходима авторизация 1');
+    return next(new NotAuthorized('Необходима авторизация 1'));
   }
 
   const token = authorization.replace('Bearer ', '');
   let payload;
 
   try {
-    payload = jwt.verify(token, 'some-secret-key');
+    payload = jwt.verify(token, process.env.SECRET_KEY);
   } catch (err) {
-    next(new NotAuthorized('Необходима авторизация 2'));
+    return next(new NotAuthorized('Необходима авторизация 2'));
   }
 
   req.user = payload;

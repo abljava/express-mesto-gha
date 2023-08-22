@@ -31,14 +31,14 @@ const validateCreateUser = celebrate({
 
 const validateEditUser = celebrate({
   body: Joi.object().keys({
-    name: Joi.string().min(2).max(30),
-    about: Joi.string().min(2).max(30),
+    name: Joi.string().min(2).max(30).required(),
+    about: Joi.string().min(2).max(30).required(),
   }),
 });
 
 const validateEditAvatar = celebrate({
   body: Joi.object().keys({
-    avatar: Joi.string().pattern(
+    avatar: Joi.string().required().pattern(
       new RegExp(
         '^(https?:\\/\\/)?'
           + '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'
